@@ -35,17 +35,17 @@ The newer SDK initially used by this application had a different binary build. M
 ## Build and run
 
 ```powershell
-Set-Location C:\BAJPluginManager
-dotnet build .\BAJPluginManager.sln --configuration Release
-dotnet test .\tests\BAJPluginManager.Tests\BAJPluginManager.Tests.csproj --configuration Release
-& .\src\BAJPluginManager.App\bin\Release\net48\CRMManager.exe
+Set-Location C:\CRMManager
+dotnet build .\CRMManager.sln --configuration Release
+dotnet test .\tests\CRMManager.Tests\CRMManager.Tests.csproj --configuration Release
+& .\src\CRMManager.App\bin\Release\net48\CRMManager.exe
 ```
 
 Distribute the **entire application output folder**, not just the executable.
 
-The application is named **CRM Manager** (`CRMManager.exe`). Existing source folder, solution, and project identifiers remain `BAJPluginManager`; they do not affect the displayed application name.
+The application is named **CRM Manager** (`CRMManager.exe`).
 
-An original blue connected-records icon is embedded in the executable and used by the main window and editors. The multi-resolution Windows icon is maintained in `src\BAJPluginManager.App\Assets\CrmManager.ico`.
+An original blue connected-records icon is embedded in the executable and used by the main window and editors. The multi-resolution Windows icon is maintained in `src\CRMManager.App\Assets\CrmManager.ico`.
 
 ## XrmToolBox edition
 

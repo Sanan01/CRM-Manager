@@ -1,0 +1,59 @@
+<Window x:Class="CRMManager.App.WebResourceEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CRM Manager - Web resource editor" Width="1120" Height="800" MinWidth="760" MinHeight="540"
+        Icon="Assets/CrmManager.ico" Style="{StaticResource {x:Type Window}}"
+        WindowStartupLocation="CenterOwner" Closing="Window_Closing">
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Save" Executed="SaveCommand_Executed" CanExecute="SaveCommand_CanExecute"/>
+    </Window.CommandBindings>
+    <Window.InputBindings><KeyBinding Key="S" Modifiers="Control" Command="ApplicationCommands.Save"/></Window.InputBindings>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="26,20">
+            <StackPanel>
+                <TextBlock Text="WEB RESOURCE EDITOR" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6"/>
+                <TextBlock x:Name="ResourceName" FontSize="23" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                <TextBlock x:Name="EnvironmentText" Style="{StaticResource Caption}" FontSize="12" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+        <Grid Grid.Row="1" Margin="26,18">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="7" Padding="14,10" Margin="0,0,0,14">
+                <TextBlock Text="You are editing unpublished content. Save updates CRM; publishing remains a separate action." Style="{StaticResource Caption}"/>
+            </Border>
+            <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="32"/></Grid.RowDefinitions>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <DockPanel>
+                            <CheckBox x:Name="WrapCode" DockPanel.Dock="Right" Content="Wrap lines" Margin="14,0,0,0"/>
+                            <TextBlock x:Name="DirtyState" Text="No local changes" Foreground="{StaticResource MutedBrush}" FontSize="12" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                    <TextBox x:Name="CodeBox" Grid.Row="1" AcceptsReturn="True" AcceptsTab="True" FontFamily="Consolas" FontSize="14"
+                             BorderThickness="0" Padding="16" VerticalContentAlignment="Top" TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Web resource code"/>
+                    <Border Grid.Row="2" Background="#F8FAFD" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="16,0">
+                        <DockPanel>
+                            <TextBlock x:Name="EncodingInfo" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CaretPosition" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="26,16">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="18,0,0,0">
+                    <Button x:Name="CloseButton" Content="Close" Click="Close_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="SaveButton" Content="Save unpublished" Click="Save_Click" Style="{StaticResource PrimaryButton}" ToolTip="Ctrl+S. Saving does not publish."/>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText" Text="Ready to edit" FontSize="12" AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock Text="Ctrl+S to save  /  Ctrl+Tab to leave the editor" Style="{StaticResource Caption}" FontSize="11"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

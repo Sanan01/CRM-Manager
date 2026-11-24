@@ -16,8 +16,8 @@
     <XrmToolBoxPath Condition="'$(XrmToolBoxPath)' == ''">C:\Tools\XrmToolBox</XrmToolBoxPath>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\BAJPluginManager.Core\*.cs" Link="Shared\%(Filename)%(Extension)" />
-    <EmbeddedResource Include="..\BAJPluginManager.App\Assets\CrmManager.ico" LogicalName="CRMManager.Icon.ico" />
+    <Compile Include="..\CRMManager.Core\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\CRMManager.App\Assets\CrmManager.ico" LogicalName="CRMManager.Icon.ico" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Runtime.Serialization" />

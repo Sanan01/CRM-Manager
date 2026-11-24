@@ -9,7 +9,7 @@ Author: **Sanan Baig**. The assembly company metadata supplies XrmToolBox's disp
 Requires Windows, .NET Framework 4.8 targeting tools, a current .NET SDK, and an installed XrmToolBox host:
 
 ```powershell
-dotnet build C:\BAJPluginManager\src\CRMManager.XrmToolBox\CRMManager.XrmToolBox.csproj --configuration Release -p:XrmToolBoxPath=C:\Tools\XrmToolBox
+dotnet build C:\CRMManager\src\CRMManager.XrmToolBox\CRMManager.XrmToolBox.csproj --configuration Release -p:XrmToolBoxPath=C:\Tools\XrmToolBox
 ```
 
 This initial project references the installed host assemblies with `Private=false`. It compiles the existing Core source files as linked source, rather than copying business logic or shipping a second SDK/connector. Shared source fixes therefore apply to both editions; each is compiled against its own host dependencies. The icon is embedded.
@@ -21,7 +21,7 @@ The output is `bin\Release\net48\CRMManager.XrmToolBox.dll`. **Only this DLL is 
 Close XrmToolBox before installing or updating the tool. For the standard user storage location:
 
 ```powershell
-Copy-Item C:\BAJPluginManager\src\CRMManager.XrmToolBox\bin\Release\net48\CRMManager.XrmToolBox.dll `
+Copy-Item C:\CRMManager\src\CRMManager.XrmToolBox\bin\Release\net48\CRMManager.XrmToolBox.dll `
     "$env:APPDATA\MscrmTools\XrmToolBox\Plugins\CRMManager.XrmToolBox.dll"
 ```
 

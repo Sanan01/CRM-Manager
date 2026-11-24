@@ -1,4 +1,4 @@
-using BAJPluginManager.Core;
+using CRMManager.Core;
 using System;
 using System.Drawing;
 using System.Windows.Forms;

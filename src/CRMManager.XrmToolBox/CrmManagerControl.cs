@@ -1,4 +1,4 @@
-using BAJPluginManager.Core;
+using CRMManager.Core;
 using McTools.Xrm.Connection;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Client;
