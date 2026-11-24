@@ -1,4 +1,4 @@
-# CRM Manager
+# CRM Manager for On-Premise
 
 Windows desktop deployment helper for **Dynamics 365 Customer Engagement on-premises 9.1**, initially targeting server build **9.1.0023.0010**. Development organizations only; higher-environment deployment remains manual.
 
