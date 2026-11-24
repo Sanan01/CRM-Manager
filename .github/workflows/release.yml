@@ -19,8 +19,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # The XrmToolBox project needs a local XrmToolBox install, so CI builds only the app and tests.
       - name: Build
-        run: dotnet build BAJPluginManager.sln --configuration Release
+        run: |
+          dotnet build src/BAJPluginManager.App/BAJPluginManager.App.csproj --configuration Release
+          dotnet build tests/BAJPluginManager.Tests/BAJPluginManager.Tests.csproj --configuration Release
 
       - name: Test
         run: dotnet test tests/BAJPluginManager.Tests/BAJPluginManager.Tests.csproj --configuration Release --no-build
