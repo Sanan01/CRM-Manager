@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <AssemblyName>CRMManager</AssemblyName>
+    <AssemblyTitle>CRM Manager</AssemblyTitle>
+    <Product>CRM Manager</Product>
+    <ApplicationIcon>Assets\CrmManager.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Security" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Resource Include="Assets\CrmManager.ico" />
+    <ProjectReference Include="..\BAJPluginManager.Core\BAJPluginManager.Core.csproj" />
+  </ItemGroup>
+</Project>

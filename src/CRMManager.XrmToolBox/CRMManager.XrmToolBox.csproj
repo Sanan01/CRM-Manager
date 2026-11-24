@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyTitle>CRM Manager for XrmToolBox</AssemblyTitle>
+    <Product>CRM Manager</Product>
+    <Company>Sanan Baig</Company>
+    <Authors>Sanan Baig</Authors>
+    <Description>On-premises CRM 9.1 development plugin, web resource and solution management.</Description>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <XrmToolBoxPath Condition="'$(XrmToolBoxPath)' == ''">C:\Tools\XrmToolBox</XrmToolBoxPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\BAJPluginManager.Core\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\BAJPluginManager.App\Assets\CrmManager.ico" LogicalName="CRMManager.Icon.ico" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="XrmToolBox.Extensibility">
+      <HintPath>$(XrmToolBoxPath)\XrmToolBox.Extensibility.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="McTools.Xrm.Connection">
+      <HintPath>$(XrmToolBoxPath)\McTools.Xrm.Connection.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Sdk">
+      <HintPath>$(XrmToolBoxPath)\Microsoft.Xrm.Sdk.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Crm.Sdk.Proxy">
+      <HintPath>$(XrmToolBoxPath)\Microsoft.Crm.Sdk.Proxy.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Tooling.Connector">
+      <HintPath>$(XrmToolBoxPath)\Microsoft.Xrm.Tooling.Connector.dll</HintPath><Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="CheckXrmToolBoxInstallation" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(XrmToolBoxPath)\XrmToolBox.Extensibility.dll')" Text="Set XrmToolBoxPath to an installed XrmToolBox folder. This tool is initially targeting host 1.2025.10.74." />
+  </Target>
+</Project>
