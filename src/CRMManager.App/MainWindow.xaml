@@ -36,6 +36,9 @@
                     <RadioButton x:Name="SolutionsNav" GroupName="Pages" Tag="3" Style="{StaticResource NavigationItem}" AutomationProperties.Name="Solution exports">
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" Margin="0,2,12,0"/><TextBlock Text="Solution exports" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
                     </RadioButton>
+                    <RadioButton x:Name="DataNav" GroupName="Pages" Tag="4" Style="{StaticResource NavigationItem}" AutomationProperties.Name="Data export">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" Margin="0,2,12,0"/><TextBlock Text="Data export" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+                    </RadioButton>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -271,6 +274,148 @@
                             </Grid>
                         </Border>
                     </Grid>
+                    <ScrollViewer x:Name="DataWorkspace" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel MaxWidth="960" HorizontalAlignment="Left" Margin="0,0,12,16">
+                            <Border Style="{StaticResource Card}" Background="{StaticResource AccentSoftBrush}" BorderBrush="#CFE0FF" Padding="20,16" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="Copy data to another environment" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Style="{StaticResource Caption}" Text="Pick the data you want, export it to a file, then import that file in the next environment with Microsoft's Configuration Migration tool. This only reads data. Nothing in CRM is changed."/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <RadioButton x:Name="DataModeGuided" GroupName="DataMode" IsChecked="True" Content="Guided: choose from lists" Margin="0,0,24,0" Checked="DataMode_Changed" AutomationProperties.Name="Guided mode"/>
+                                        <RadioButton x:Name="DataModePaste" GroupName="DataMode" Content="Advanced: paste FetchXML" Checked="DataMode_Changed" AutomationProperties.Name="Paste FetchXML mode"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel x:Name="DataGuidedPanel">
+                                <Border Style="{StaticResource Card}" Padding="20,16" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource AccentBrush}" VerticalAlignment="Top"><TextBlock Text="1" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                <TextBlock Text="Choose a table" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                <TextBlock Style="{StaticResource Caption}" Text="A table holds one kind of record, such as Account or Contact. Type to find it, then click it."/>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="Refresh tables" Click="RefreshTables_Click" VerticalAlignment="Top" Style="{StaticResource QuietButton}"/>
+                                        </Grid>
+                                        <DockPanel Margin="0,12,0,0">
+                                            <TextBlock x:Name="DataTableCount" DockPanel.Dock="Right" Text="Not loaded" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                            <TextBox x:Name="DataTableSearch" Style="{StaticResource SearchBox}" Tag="Search tables, for example account" TextChanged="DataTableSearch_Changed"
+                                                     AutomationProperties.Name="Search tables" ToolTip="Filter tables by display name or logical name, then select one."/>
+                                        </DockPanel>
+                                        <ListBox x:Name="DataTable" Height="150" Margin="0,8,0,0" DisplayMemberPath="Label" SelectionChanged="DataTable_Changed" AutomationProperties.Name="Tables"/>
+                                        <TextBlock x:Name="DataSelectedTable" Margin="0,10,0,0" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" Text="No table selected yet."/>
+                                    </StackPanel>
+                                </Border>
+
+                                <StackPanel x:Name="DataStepsPanel" Opacity="0.45" IsEnabled="False">
+                                    <Border Style="{StaticResource Card}" Padding="20,16" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource AccentBrush}" VerticalAlignment="Top"><TextBlock Text="2" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                    <TextBlock Text="Choose columns" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                    <TextBlock x:Name="DataColumnCount" Style="{StaticResource Caption}" Text="Tick the columns to export. Tick none to export every column."/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                                    <Button Content="Select all" Click="SelectAllColumns_Click" Style="{StaticResource QuietButton}"/>
+                                                    <Button Content="Clear" Click="ClearColumns_Click" Style="{StaticResource QuietButton}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <ListBox x:Name="DataColumns" Height="180" Margin="0,10,0,0" AutomationProperties.Name="Columns">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate><CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="DataSelection_Changed"/></DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource Card}" Padding="20,16" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource AccentBrush}" VerticalAlignment="Top"><TextBlock Text="3" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                    <TextBlock Text="Narrow down the records (optional)" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                    <TextBlock Style="{StaticResource Caption}" Text="Add conditions to export only some records, for example Status equals 0. With no conditions, all records are exported."/>
+                                                </StackPanel>
+                                                <Button Grid.Column="2" Content="+ Add condition" Click="AddFilter_Click" Style="{StaticResource PrimaryButton}" VerticalAlignment="Top"/>
+                                            </Grid>
+                                            <StackPanel Orientation="Horizontal" Margin="0,12,0,8" x:Name="DataMatchPanel" Visibility="Collapsed">
+                                                <TextBlock Text="Export records that match" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="DataMatchMode" SelectedIndex="0" MinWidth="200" SelectionChanged="DataSelection_Changed" AutomationProperties.Name="Filter match mode">
+                                                    <ComboBoxItem Content="all of these conditions"/>
+                                                    <ComboBoxItem Content="any of these conditions"/>
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <TextBlock x:Name="DataFilterEmpty" Style="{StaticResource Caption}" Margin="0,10,0,0" Text="No conditions added. All records of the table will be exported."/>
+                                            <ItemsControl x:Name="DataFilters">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/><ColumnDefinition Width="170"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <ComboBox ItemsSource="{Binding Columns}" DisplayMemberPath="Label" SelectedValuePath="LogicalName" SelectedValue="{Binding Column, Mode=TwoWay}" AutomationProperties.Name="Filter column" ToolTip="Column to check"/>
+                                                            <ComboBox Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding Operators}" DisplayMemberPath="Label" SelectedValuePath="Key" SelectedValue="{Binding Operator, Mode=TwoWay}" AutomationProperties.Name="Filter operator"/>
+                                                            <TextBox Grid.Column="2" Margin="8,0,0,0" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding NeedsValue}" Tag="Value" AutomationProperties.Name="Filter value"
+                                                                     ToolTip="Text, number or date (yyyy-MM-dd). Use % as a wildcard with 'matches pattern'. Choice and lookup columns use their number or GUID."/>
+                                                            <Button Grid.Column="3" Margin="8,0,0,0" Content="Remove" Tag="{Binding}" Click="RemoveFilter_Click" Style="{StaticResource QuietButton}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource Card}" Padding="20,16" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource AccentBrush}" VerticalAlignment="Top"><TextBlock Text="4" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                    <TextBlock Text="Keep connections to related records (optional)" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                    <TextBlock Style="{StaticResource Caption}" Text="Some records are linked to others in a many-to-many relationship, such as users and roles. Tick this to also export those links."/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <CheckBox x:Name="DataIncludeM2M" Content="Include many-to-many relationships" Margin="0,12,0,0" Checked="DataIncludeM2M_Changed" Unchecked="DataIncludeM2M_Changed"
+                                                      ToolTip="The related records must already exist in the target environment or be migrated separately."/>
+                                            <ListBox x:Name="DataRelationships" Visibility="Collapsed" Height="120" Margin="0,8,0,0" AutomationProperties.Name="Many-to-many relationships">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate><CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="DataSelection_Changed"/></DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                            <TextBlock x:Name="DataRelationshipsHint" Visibility="Collapsed" Style="{StaticResource Caption}" FontSize="12" Margin="0,6,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border x:Name="DataPastePanel" Visibility="Collapsed" Style="{StaticResource Card}" Padding="20,16" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="Paste your FetchXML" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Style="{StaticResource Caption}" Text="In Advanced Find, build your view, choose Download Fetch XML, and paste it here. Many-to-many options below apply to the table in the FetchXML."/>
+                                    <TextBox x:Name="DataFetchXml" Height="220" Margin="0,10,0,0" AcceptsReturn="True" AcceptsTab="True" FontFamily="Consolas" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                             TextChanged="DataFetchXml_Changed" AutomationProperties.Name="FetchXML" ToolTip="Only the selected columns of the root table are exported. Filters and joins define which records."/>
+                                    <CheckBox x:Name="DataPasteM2M" Content="Include all many-to-many relationships of this table" Margin="0,12,0,0" Checked="DataPasteM2M_Changed" Unchecked="DataPasteM2M_Changed"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}" Padding="20,16">
+                                <StackPanel>
+                                    <TextBlock Text="Review and export" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock x:Name="DataSummary" Style="{StaticResource Caption}" Text="Choose a table to begin."/>
+                                    <Expander Header="Show the query that will run (FetchXML)" Margin="0,8,0,0">
+                                        <TextBox x:Name="DataPreview" IsReadOnly="True" Height="140" Margin="0,8,0,0" FontFamily="Consolas" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Generated FetchXML"/>
+                                    </Expander>
+                                    <Button x:Name="ExportDataButton" Content="Export data..." Click="ExportData_Click" IsEnabled="False" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Padding="24,10" Margin="0,14,0,0"
+                                            ToolTip="Choose where to save the export file."/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
             </Grid>
             <Border Grid.Row="3" Margin="28,16,28,12" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
                 <Expander x:Name="ActivityPanel" Header="Activity log" FontSize="12">

@@ -435,6 +435,15 @@ namespace CRMManager.Core
             return true;
         });
 
+        public Task<(int Records, int Links)> ExportDataAsync(string fetchXml, IReadOnlyCollection<string>? relationships, string outputPath) => RunAsync(() =>
+        {
+            DataExporter.WriteFile(DataExporter.BuildPackage(Service, fetchXml, relationships, out var records, out var links), outputPath);
+            return (records, links);
+        });
+
+        public Task<IReadOnlyList<TableInfo>> GetTablesAsync() => RunAsync(() => DataExporter.GetTables(Service));
+        public Task<TableDetails> GetTableDetailsAsync(string table) => RunAsync(() => DataExporter.GetTableDetails(Service, table));
+
         public Task<IReadOnlyList<PluginTypeInfo>> GetPluginTypesAsync(Guid assemblyId) => RunAsync(() => Registrations.GetTypes(assemblyId));
         public Task<IReadOnlyList<StepRegistration>> GetStepsAsync(Guid typeId) => RunAsync(() => Registrations.GetSteps(typeId));
         public Task<StepRegistration> GetStepAsync(Guid id, bool includeConfiguration = true) => RunAsync(() => Registrations.GetStep(id, includeConfiguration));
