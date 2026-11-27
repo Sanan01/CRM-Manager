@@ -23,6 +23,12 @@ namespace CRMManager.App
         private readonly CrmSession session = new CrmSession();
         private bool busy;
         private int currentPage;
+        private TableDetails? dataDetails;
+        private string? dataDetailsTable;
+        private string? dataTablesOrganization;
+        private List<SelectableItem> dataRelationships = new List<SelectableItem>();
+        private readonly System.Collections.ObjectModel.ObservableCollection<FilterRow> dataFilters =
+            new System.Collections.ObjectModel.ObservableCollection<FilterRow>();
         private readonly ConnectionProfileStore profileStore;
         private SavedConnections savedConnections = new SavedConnections();
         private bool loadingProfile;
@@ -40,11 +46,15 @@ namespace CRMManager.App
             AccountPassword.PasswordChanged += ConnectionSettings_Changed;
             OrganizationUrl.TextChanged += ConnectionSettings_Changed;
             SavedConnectionName.TextChanged += ConnectionSettings_Changed;
-            foreach (var item in new[] { ConnectionNav, PluginsNav, ResourcesNav, SolutionsNav })
+            foreach (var item in new[] { ConnectionNav, PluginsNav, ResourcesNav, SolutionsNav, DataNav })
                 item.Checked += Navigation_Changed;
             AssemblySearch.TextChanged += AssemblySearch_Changed;
             ResourceSearch.TextChanged += ResourceSearch_Changed;
             SolutionSearch.TextChanged += SolutionSearch_Changed;
+            DataFilters.ItemsSource = dataFilters;
+            dataFilters.CollectionChanged += Filters_CollectionChanged;
+            DataRelationships.ItemsSource = dataRelationships;
+            UpdateDataPreview();
             SetEnabledState();
             UpdateListStates();
             Log("Client libraries: CRM SDK "
@@ -563,17 +573,23 @@ namespace CRMManager.App
             PluginWorkspace.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
             ResourceWorkspace.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
             SolutionWorkspace.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
-            var titles = new[] { "Connect to your CRM", "Plugins & registrations", "Web resources", "Solution exports" };
+            DataWorkspace.Visibility = page == 4 ? Visibility.Visible : Visibility.Collapsed;
+            var titles = new[] { "Connect to your CRM", "Plugins & registrations", "Web resources", "Solution exports", "Data export" };
             var descriptions = new[]
             {
                 "A secure connection to your on-premises development organization.",
                 "Explore assemblies, manage execution steps, and keep images in context.",
                 "Find your resource. Edit or upload. Publish when you are ready.",
-                "Package published changes for your manual deployment workflow."
+                "Package published changes for your manual deployment workflow.",
+                "Export table records for the Configuration Migration tool."
             };
             PageTitle.Text = titles[page];
             PageDescription.Text = descriptions[page];
             UpdateConnectionNotice();
+            if (page == 4 && session.IsConnected && dataTablesOrganization != session.Endpoint)
+            {
+                _ = LoadTablesAsync();
+            }
         }
 
         private void GoToConnection_Click(object sender, RoutedEventArgs e) => ConnectionNav.IsChecked = true;
@@ -687,6 +703,280 @@ namespace CRMManager.App
             });
         }
 
+        private async void ExportData_Click(object sender, RoutedEventArgs e)
+        {
+            await ExecuteAsync("Exporting data", async () =>
+            {
+                var fetchXml = CurrentFetch();
+                var table = DataExporter.ParseFetch(fetchXml, out _);
+                var includeLinks = IncludeLinks;
+                List<string>? relationships = null;
+                if (includeLinks)
+                {
+                    // Guided mode uses the ticked relationships; pasted FetchXML includes all relationships of its table.
+                    relationships = IsGuidedMode && dataDetails != null && dataDetailsTable == table
+                        ? dataRelationships.Where(r => r.IsSelected).Select(r => r.Key).ToList()
+                        : (await session.GetTableDetailsAsync(table)).Relationships.Select(r => r.SchemaName).ToList();
+                }
+
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "Configuration Migration data (*.zip)|*.zip",
+                    DefaultExt = ".zip",
+                    AddExtension = true,
+                    OverwritePrompt = true,
+                    FileName = $"data_{table}_{DateTime.Now:yyyyMMdd_HHmm}.zip"
+                };
+                if (dialog.ShowDialog(this) != true
+                    || !Confirm($"Export the '{table}' records matching this FetchXML from '{session.OrganizationName}'?"
+                        + (relationships != null ? $"\n\nMany-to-many relationships included: {relationships.Count}" : "")
+                        + "\n\nThe ZIP can contain business data. Import into higher environments manually with the Configuration Migration tool."))
+                {
+                    return false;
+                }
+
+                var result = await session.ExportDataAsync(fetchXml, relationships, dialog.FileName);
+                var summary = $"Exported {result.Records} {table} record{(result.Records == 1 ? "" : "s")}"
+                    + (relationships != null ? $" and {result.Links} many-to-many link{(result.Links == 1 ? "" : "s")}" : "")
+                    + " to " + dialog.FileName;
+                Log(summary);
+                MessageBox.Show(this, summary, "Data export complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                return true;
+            });
+        }
+
+        private async void RefreshTables_Click(object sender, RoutedEventArgs e) => await LoadTablesAsync();
+
+        private Task LoadTablesAsync() => ExecuteAsync("Loading tables", async () =>
+        {
+            var loaded = await session.GetTablesAsync();
+            dataTablesOrganization = session.Endpoint;
+            DataTable.ItemsSource = loaded;
+            DataTable.SelectedItem = null;
+            ApplyTableFilter();
+            ResetTableBuilder();
+        });
+
+        private void ResetTableBuilder()
+        {
+            dataDetails = null;
+            dataDetailsTable = null;
+            dataFilters.Clear();
+            DataColumns.ItemsSource = null;
+            dataRelationships = new List<SelectableItem>();
+            DataRelationships.ItemsSource = dataRelationships;
+            DataSelectedTable.Text = "No table selected yet.";
+            DataStepsPanel.IsEnabled = false;
+            DataStepsPanel.Opacity = 0.45;
+            UpdateRelationshipVisibility();
+            UpdateDataPreview();
+        }
+
+        private void DataTableSearch_Changed(object sender, TextChangedEventArgs e) => ApplyTableFilter();
+
+        private void ApplyTableFilter()
+        {
+            if (!(DataTable.ItemsSource is IReadOnlyList<TableInfo> all))
+            {
+                DataTableCount.Text = "Not loaded";
+                return;
+            }
+
+            var text = DataTableSearch.Text.Trim();
+            CollectionViewSource.GetDefaultView(all).Filter = text.Length == 0 ? (Predicate<object>?)null
+                : item => item is TableInfo table && table.Label.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0;
+            DataTableCount.Text = $"{DataTable.Items.Count} of {all.Count} tables";
+        }
+
+        private async void DataTable_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (!(DataTable.SelectedItem is TableInfo table) || table.LogicalName == dataDetailsTable)
+            {
+                return;
+            }
+
+            await ExecuteAsync("Loading table columns", async () =>
+            {
+                var details = await session.GetTableDetailsAsync(table.LogicalName);
+                ResetTableBuilder();
+                dataDetails = details;
+                dataDetailsTable = table.LogicalName;
+                DataColumns.ItemsSource = details.Columns.Select(c => new SelectableItem { Key = c.LogicalName, Label = c.Label }).ToList();
+                dataRelationships = details.Relationships.Select(r => new SelectableItem { Key = r.SchemaName, Label = r.Label, IsSelected = true }).ToList();
+                DataRelationships.ItemsSource = dataRelationships;
+                DataSelectedTable.Text = $"Selected: {table.Label}";
+                DataStepsPanel.IsEnabled = true;
+                DataStepsPanel.Opacity = 1;
+                UpdateRelationshipVisibility();
+                UpdateDataPreview();
+            });
+        }
+
+        private void SelectAllColumns_Click(object sender, RoutedEventArgs e) => SetColumnSelection(true);
+
+        private void ClearColumns_Click(object sender, RoutedEventArgs e) => SetColumnSelection(false);
+
+        private void SetColumnSelection(bool selected)
+        {
+            if (DataColumns.ItemsSource is List<SelectableItem> items)
+            {
+                items.ForEach(i => i.IsSelected = selected);
+                DataColumns.Items.Refresh();
+                UpdateDataPreview();
+            }
+        }
+
+        private void AddFilter_Click(object sender, RoutedEventArgs e)
+        {
+            if (dataDetails == null)
+            {
+                MessageBox.Show(this, "Select a table first.", "Add condition", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            dataFilters.Add(new FilterRow(dataDetails.Columns));
+        }
+
+        private void RemoveFilter_Click(object sender, RoutedEventArgs e)
+        {
+            if (((FrameworkElement)sender).Tag is FilterRow row)
+            {
+                dataFilters.Remove(row);
+            }
+        }
+
+        private void DataIncludeM2M_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateRelationshipVisibility();
+            UpdateDataPreview();
+        }
+
+        private void UpdateRelationshipVisibility()
+        {
+            var show = DataIncludeM2M.IsChecked == true;
+            DataRelationships.Visibility = show && dataRelationships.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            DataRelationshipsHint.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            DataRelationshipsHint.Text = dataDetails == null
+                ? "Select a table to list its many-to-many relationships. Pasted FetchXML includes all relationships of its table."
+                : dataRelationships.Count == 0 ? "This table has no many-to-many relationships."
+                : "Checked relationships are exported with the selected records.";
+        }
+
+        private string BuildGuidedFetch()
+        {
+            if (dataDetails == null || dataDetailsTable == null)
+            {
+                throw new ArgumentException("Choose a table to begin.");
+            }
+
+            var columns = (DataColumns.ItemsSource as IEnumerable<SelectableItem> ?? Enumerable.Empty<SelectableItem>())
+                .Where(c => c.IsSelected).Select(c => c.Key);
+            var conditions = dataFilters.Select(f => new FilterCondition
+            {
+                Column = f.Column,
+                Operator = f.Operator,
+                Value = f.NeedsValue ? f.Value : ""
+            });
+            return DataExporter.BuildFetchXml(dataDetailsTable, columns, conditions, DataMatchMode.SelectedIndex == 1);
+        }
+
+        private bool IsGuidedMode => DataModeGuided.IsChecked == true;
+
+        private bool IncludeLinks => IsGuidedMode ? DataIncludeM2M.IsChecked == true : DataPasteM2M.IsChecked == true;
+
+        private string CurrentFetch() => IsGuidedMode ? BuildGuidedFetch() : DataFetchXml.Text;
+
+        private void DataMode_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DataSummary == null)
+            {
+                return;
+            }
+
+            DataGuidedPanel.Visibility = IsGuidedMode ? Visibility.Visible : Visibility.Collapsed;
+            DataPastePanel.Visibility = IsGuidedMode ? Visibility.Collapsed : Visibility.Visible;
+            UpdateDataPreview();
+        }
+
+        private void DataSelection_Changed(object sender, RoutedEventArgs e) => UpdateDataPreview();
+
+        private void DataFetchXml_Changed(object sender, TextChangedEventArgs e) => UpdateDataPreview();
+
+        private void DataPasteM2M_Changed(object sender, RoutedEventArgs e) => UpdateDataPreview();
+
+        private void Filter_Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => UpdateDataPreview();
+
+        private void Filters_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (FilterRow row in e.OldItems)
+                {
+                    row.PropertyChanged -= Filter_Changed;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (FilterRow row in e.NewItems)
+                {
+                    row.PropertyChanged += Filter_Changed;
+                }
+            }
+
+            UpdateDataPreview();
+        }
+
+        private void UpdateDataPreview()
+        {
+            if (DataSummary == null)
+            {
+                return;
+            }
+
+            DataFilterEmpty.Visibility = dataFilters.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            DataMatchPanel.Visibility = dataFilters.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+            var selectedColumns = (DataColumns.ItemsSource as IEnumerable<SelectableItem>)?.Count(c => c.IsSelected) ?? 0;
+            DataColumnCount.Text = selectedColumns == 0
+                ? "Tick the columns to export. Tick none to export every column."
+                : $"{selectedColumns} column{(selectedColumns == 1 ? "" : "s")} selected.";
+
+            try
+            {
+                var fetch = CurrentFetch();
+                var table = DataExporter.ParseFetch(fetch, out _);
+                DataPreview.Text = fetch;
+                var parts = new List<string> { $"Table: {table}" };
+                if (IsGuidedMode)
+                {
+                    parts.Add(selectedColumns == 0 ? "all columns" : $"{selectedColumns} column{(selectedColumns == 1 ? "" : "s")}");
+                    parts.Add(dataFilters.Count == 0 ? "all records" : $"{dataFilters.Count} condition{(dataFilters.Count == 1 ? "" : "s")}");
+                    if (IncludeLinks)
+                    {
+                        var linked = dataRelationships.Count(r => r.IsSelected);
+                        parts.Add($"{linked} many-to-many relationship{(linked == 1 ? "" : "s")}");
+                    }
+                }
+                else if (IncludeLinks)
+                {
+                    parts.Add("all many-to-many relationships");
+                }
+
+                DataSummary.Text = string.Join("  ·  ", parts) + ". Click Export to choose where to save the file.";
+                DataSummary.Foreground = (Brush)FindResource("MutedBrush");
+                ExportDataButton.IsEnabled = true;
+            }
+            catch (Exception exception) when (exception is ArgumentException || exception is System.Xml.XmlException)
+            {
+                DataPreview.Text = "";
+                DataSummary.Text = IsGuidedMode || DataFetchXml.Text.Length > 0
+                    ? exception.Message
+                    : "Paste your FetchXML above.";
+                DataSummary.Foreground = (Brush)FindResource("MutedBrush");
+                ExportDataButton.IsEnabled = false;
+            }
+        }
+
         private Task ExecuteAsync(string operation, Func<Task> action) =>
             ExecuteAsync(operation, async () => { await action(); return true; });
 
@@ -733,6 +1023,7 @@ namespace CRMManager.App
             PluginWorkspace.IsEnabled = !busy && session.IsConnected;
             ResourceWorkspace.IsEnabled = !busy && session.IsConnected;
             SolutionWorkspace.IsEnabled = !busy && session.IsConnected;
+            DataWorkspace.IsEnabled = !busy && session.IsConnected;
             using (var password = AccountPassword.SecurePassword)
             {
                 ConnectButton.IsEnabled = !busy && (session.IsConnected || (!string.IsNullOrWhiteSpace(OrganizationUrl.Text)
